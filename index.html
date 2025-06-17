@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Warehouse Lookup</title>
+  <script src="https://unpkg.com/@ericblade/quagga2@1.2.6/dist/quagga.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 1em; max-width: 600px; margin: auto; }
+    #scanner { width: 100%; max-height: 300px; margin-top: 1em; display: none; border: 2px dashed #ccc; }
+    #status { margin-top: 0.5em; font-style: italic; color: gray; }
+    .result { margin-top: 1em; font-weight: bold; }
+    input, button { padding: 0.5em; font-size: 1em; width: 100%; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Warehouse Item Lookup</h1>
+  <button onclick="startScanner()">📷 Scan Barcode</button>
+  <video id="scanner"></video>
+  <div id="status"></div>
+  <input type="text" id="search" placeholder="Enter barcode or name" />
+  <button onclick="performSearch()">Search</button>
+  <div id="result" class="result"></div>
+
+  <script>
+    function startScanner() {
+      const scannerEl = document.getElementById('scanner');
+      scannerEl.style.display = 'block';
+      document.getElementById("status").textContent = "Scanning...";
+
+      Quagga.init({
+        inputStream: {
+          type: "LiveStream",
+          target: scannerEl,
+          constraints: { facingMode: "environment" }
+        },
+        decoder: { readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader"] }
+      }, function(err) {
+        if (err) { console.error(err); return; }
+        Quagga.start();
+      });
+
+      Quagga.onDetected(function(data) {
+        const code = data.codeResult.code;
+        document.getElementById("status").textContent = `Scanned ✅: ${code}`;
+        document.getElementById("search").value = code;
+        Quagga.stop();
+        scannerEl.style.display = 'none';
+        performSearch();
+      });
+    }
+
+    function performSearch() {
+      const query = document.getElementById("search").value.trim();
+      if (!query) return;
+      fetch(`/search?q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+          const resultDiv = document.getElementById("result");
+          if (data.length > 0) {
+            resultDiv.innerHTML = data.map(item => `🔹 ${item.name} → ${item.location}`).join("<br>");
+          } else {
+            resultDiv.textContent = "Item not found.";
+          }
+        });
+    }
+
+    document.getElementById("search").addEventListener("keyup", function(e) {
+      if (e.key === "Enter") performSearch();
+    });
+  </script>
+</body>
+</html>
