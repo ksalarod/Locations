@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warehouse Item Lookup</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input { width: 100%; padding: 10px; font-size: 1.2em; margin-bottom: 10px; }
+    #result { font-size: 1.2em; margin-top: 10px; }
+    .file-upload { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<h2>Warehouse Lookup</h2>
+
+<!-- Search Bar -->
+<input type="text" id="searchBar" placeholder="Search for item...">
+
+<!-- File Upload (for .xlsx) -->
+<div class="file-upload">
+  <input type="file" id="fileInput" />
+</div>
+
+<div id="result"></div>
+
+<script>
+  let items = [];
+
+  // Handle file upload and process .xlsx
+  document.getElementById("fileInput").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (file && file.name.endsWith(".xlsx")) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Assume the first sheet
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        // Convert sheet to JSON (JavaScript objects)
+        items = XLSX.utils.sheet_to_json(sheet);
+        console.log(items);  // To see what we're dealing with
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert("Please upload a valid .xlsx file");
+    }
+  });
+
+  // Search functionality
+  document.getElementById("searchBar").addEventListener("input", function(e) {
+    const query = e.target.value.trim().toLowerCase();
+    if (!query) {
+      document.getElementById("result").innerText = "";
+      return;
+    }
+
+    const match = items.find(item =>
+      item["Item Name"] && item["Item Name"].toLowerCase().includes(query)
+    );
+
+    document.getElementById("result").innerHTML = match
+      ? `<strong>${match["Item Name"]}</strong> is in <strong>${match["Location"]}</strong>`
+      : "Item not found.";
+  });
+</script>
+
+</body>
+</html>
