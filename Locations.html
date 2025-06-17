@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warehouse Lookup</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.1/papaparse.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input { width: 100%; padding: 10px; font-size: 1.2em; }
+    #result { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <h2>Warehouse Item Lookup</h2>
+  <input type="text" id="searchBar" placeholder="Type item name...">
+  <div id="result"></div>
+
+  <script>
+    let data = [];
+
+    Papa.parse("items.csv", {
+      download: true,
+      header: true,
+      complete: function(results) {
+        data = results.data;
+      }
+    });
+
+    document.getElementById("searchBar").addEventListener("input", function(e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const match = data.find(item => item["Item Name"].toLowerCase().includes(searchTerm));
+      document.getElementById("result").innerHTML = match
+        ? `<strong>Location:</strong> ${match.Location}`
+        : "Item not found.";
+    });
+  </script>
+
+</body>
+</html>
