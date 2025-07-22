@@ -9,31 +9,31 @@ PUTAWAYSHEET2_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKJoXBk7b3
 
 # Load functions
 def load_putawaysheet3():
-return pd.read_csv(PUTAWAYSHEET3_URL).to_dict(orient="records")
+    return pd.read_csv(PUTAWAYSHEET3_URL).to_dict(orient="records")
 
 def load_putawaysheet2():
-return pd.read_csv(PUTAWAYSHEET2_URL).to_dict(orient="records")
+    return pd.read_csv(PUTAWAYSHEET2_URL).to_dict(orient="records")
 
 @app.route('/')
 def home():
-return send_from_directory('.', 'index.html')
+    return send_from_directory('.', 'index.html')
 
 @app.route('/search')
 def search():
-query = request.args.get('q', '').lower()
-matches = []
+    query = request.args.get('q', '').lower()
+    matches = []
 
 # You can switch to sheet 2 or 3 as needed
-data = load_putawaysheet3() # or load_putawaysheet2()
+    data = load_putawaysheet3() # or load_putawaysheet2()
 
-for row in data:
-if query in str(row.get('barcode', '')).lower() or query in str(row.get('name', '')).lower():
-matches.append({
-"name": row.get('name', ''),
-"location": row.get('location', '')
-})
+    for row in data:
+        if query in str(row.get('barcode', '')).lower() or query in str(row.get('name', '')).lower():
+            matches.append({
+                "name": row.get('name', ''),
+                "location": row.get('location', '')
+            })
 
-return jsonify(matches)
+    return jsonify(matches)
 
 if __name__ == '__main__':
-app.run(host='0.0.0.0', port=81)
+    app.run(host='0.0.0.0', port=81)
