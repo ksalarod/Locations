@@ -4,10 +4,10 @@ PUTAWAYSHEET3_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS8slYmMBax
 PUTAWAYSHEET2_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKJoXBk7b3ULmRa7s_21tJRahYrSjCIdIIhVeQWy07KllIRPFm8pbd2B43pr9DKnRQBMyZUE_N7W85/pub?output=csv"
 
 def load_putawaysheet3():
-return pd.read_csv(WAREHOUSE_URL).to_dict(orient="records")
+return pd.read_csv(PUTAWATSHEET3_URL).to_dict(orient="records")
 
 def load_putawatsheet2():
-return pd.read_csv(RETURNS_URL).to_dict(orient="records")
+return pd.read_csv(PUTAWAYSHEET2_URL).to_dict(orient="records")
 
 
 @app.route('/')
