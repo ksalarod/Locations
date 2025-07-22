@@ -1,11 +1,14 @@
 
 from flask import Flask, request, jsonify, send_from_directory
-import pandas as pd
+PUTAWAYSHEET3_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS8slYmMBaxGfOhQvSIvLPobwcX6OGWTRP8xk0uulGkSD9A_b_8cy-xXV16zbiqZBGkhpycfGAOHYug/pub?output=csv"
+PUTAWAYSHEET2_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKJoXBk7b3ULmRa7s_21tJRahYrSjCIdIIhVeQWy07KllIRPFm8pbd2B43pr9DKnRQBMyZUE_N7W85/pub?output=csv"
 
-app = Flask(__name__, static_url_path='')
+def load_putawaysheet3():
+return pd.read_csv(WAREHOUSE_URL).to_dict(orient="records")
 
-df = pd.read_csv('items_merged.csv')
-df.fillna('', inplace=True)
+def load_putawatsheet2():
+return pd.read_csv(RETURNS_URL).to_dict(orient="records")
+
 
 @app.route('/')
 def home():
