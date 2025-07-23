@@ -28,13 +28,15 @@ def search():
     query = request.args.get('q', '').lower().strip()
     matches = []
 
+    print(f"Search Query: {query}")  # Logging for debugging
+
     data3 = load_putawaysheet3()
     data2 = load_putawaysheet2()
 
     # Search Sheet 3 (UPC + Item Number)
     for row in data3:
-        upc = str(row.get('UPC', '')).strip().lower()
-        item_number = str(row.get('Item Number', '')).strip().lower()
+        upc = str(row.get('UPC', '')).lower().strip()
+        item_number = str(row.get('Item Number', '')).lower().strip()
         if query in upc or query in item_number:
             matches.append({
                 "sheet": "Putaway Sheet 3",
@@ -45,7 +47,7 @@ def search():
 
     # Search Sheet 2 (SKU + Putaway Location)
     for row in data2:
-        sku = str(row.get('SKU', '')).strip().lower()
+        sku = str(row.get('SKU', '')).lower().strip()
         if query in sku:
             matches.append({
                 "sheet": "Putaway Sheet 2",
@@ -54,6 +56,7 @@ def search():
                 "location": row.get('Putaway Location', '')
             })
 
+    print(f"Matches found: {len(matches)}")  # Logging for debugging
     return jsonify(matches)
 
 if __name__ == '__main__':
