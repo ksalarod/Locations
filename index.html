@@ -5,9 +5,9 @@
   <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; text-align: center; }
     h1 { margin: 20px 0; }
-    #video { width: 100%; max-width: 500px; height: auto; border-radius: 8px; }
+    #scanner-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
+    #video { width: 100%; border-radius: 8px; background: black; }
     #scan-frame { position: absolute; border: 3px solid red; top: 20%; left: 10%; width: 80%; height: 40%; border-radius: 8px; pointer-events: none; }
-    #scanner-container { position: relative; display: inline-block; }
     #manual-input { margin: 20px auto; display: flex; justify-content: center; gap: 10px; }
     input[type="text"] { padding: 10px; font-size: 1.1em; border-radius: 5px; border: 1px solid #ccc; width: 60%; }
     button { padding: 10px 15px; font-size: 1.1em; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
@@ -20,7 +20,7 @@
 <body>
   <h1>Warehouse Item Lookup</h1>
   <div id="scanner-container">
-    <video id="video"></video>
+    <video id="video" playsinline autoplay muted></video>
     <div id="scan-frame"></div>
   </div>
   <div id="manual-input">
@@ -38,6 +38,11 @@
     import { BrowserMultiFormatReader } from 'https://cdn.jsdelivr.net/npm/@zxing/library@latest/esm/index.js';
     const codeReader = new BrowserMultiFormatReader();
     const video = document.getElementById('video');
+
+    // Camera init for iOS
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => { video.srcObject = stream; video.play(); })
+      .catch(err => console.error("Camera error:", err));
 
     codeReader.listVideoInputDevices().then(videoInputDevices => {
       const firstDeviceId = videoInputDevices[0].deviceId;
