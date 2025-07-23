@@ -34,20 +34,20 @@
     const video = document.getElementById('video');
     let lastScanned = "";
 
-    // Start camera + continuous scan
-    window.addEventListener('load', () => {
-      codeReader.listVideoInputDevices().then(devices => {
-        const deviceId = devices[0]?.deviceId;
-        if (!deviceId) { alert("No camera found"); return; }
-        codeReader.decodeFromVideoDevice(deviceId, 'video', (result, err) => {
-          if (result && result.text !== lastScanned) {
-            lastScanned = result.text;
-            processResult(result.text);
-            setTimeout(() => { lastScanned = ""; }, 2000); // cooldown
-          }
-        });
-      }).catch(err => alert("Camera error: " + err));
+   window.addEventListener('load', () => {
+  codeReader.listVideoInputDevices().then(videoInputDevices => {
+    // Find the back camera if available
+    let backCam = videoInputDevices.find(device => device.label.toLowerCase().includes('back'))?.deviceId || videoInputDevices[0].deviceId;
+    codeReader.decodeFromVideoDevice(backCam, 'video', (result, err) => {
+      if (result && result.text !== lastScanned) {
+        lastScanned = result.text;
+        processResult(result.text);
+        setTimeout(() => { lastScanned = ""; }, 2000);
+      }
     });
+  }).catch(err => alert("Camera error: " + err));
+});
+
 
     function processResult(code) {
       fetch('/search?q=' + encodeURIComponent(code))
