@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Warehouse Item Lookup</title>
+  <title>Warehouse Scanner</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; text-align: center; }
     h1 { margin: 20px 0; }
-    #scanner-container { width: 100%; max-width: 500px; margin: auto; position: relative; }
-    #interactive { width: 100%; height: 300px; background: #000; }
-    #scan-frame { position: absolute; border: 3px solid red; top: 25%; left: 25%; width: 50%; height: 30%; box-sizing: border-box; pointer-events: none; }
+    #scanner-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
+    #interactive { width: 100%; height: 350px; background: #000; border-radius: 8px; }
+    #overlay-text { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); color: #fff; padding: 5px 10px; border-radius: 4px; }
+    #scan-frame { position: absolute; border: 3px solid red; top: 30%; left: 15%; width: 70%; height: 25%; border-radius: 6px; pointer-events: none; }
     #result-card { display: none; background: #fff; border-radius: 8px; padding: 15px; margin: 20px auto; max-width: 500px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
     #result-card h2 { margin: 0; font-size: 1.4em; }
     #result-card p { margin: 5px 0; font-size: 1.1em; }
   </style>
 </head>
 <body>
-  <h1>Scan a Barcode</h1>
+  <h1>Warehouse Item Lookup</h1>
   <div id="scanner-container">
     <div id="interactive"></div>
+    <div id="overlay-text">Align barcode within the box</div>
     <div id="scan-frame"></div>
   </div>
   <div id="result-card">
     <h2 id="item-name"></h2>
-    <p><strong>UPC:</strong> <span id="item-upc"></span></p>
+    <p><strong>UPC/SKU:</strong> <span id="item-upc"></span></p>
     <p><strong>Location:</strong> <span id="item-location"></span></p>
     <p><small>Source: <span id="sheet-name"></span></small></p>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <script>
-    // Start camera + scanner
     Quagga.init({
       inputStream: {
         name: "Live",
@@ -36,23 +37,20 @@
         target: document.querySelector('#interactive'),
         constraints: {
           facingMode: "environment",
-          width: { min: 640 },
-          height: { min: 480 },
-          aspectRatio: { min: 1, max: 2 }
+          width: { min: 1280 },
+          height: { min: 720 }
         }
       },
-      decoder: { readers: ["ean_reader", "upc_reader", "code_128_reader"] },
+      locator: { patchSize: "medium", halfSample: false },
+      numOfWorkers: 2,
+      decoder: { readers: ["ean_reader", "upc_reader", "code_128_reader", "code_39_reader"] },
       locate: true
     }, function(err) {
-      if (err) {
-        console.error(err);
-        alert("Camera access failed. Please allow camera permissions.");
-        return;
-      }
+      if (err) { console.error(err); alert("Camera access failed."); return; }
       Quagga.start();
     });
 
-    // On detection
+    // Detect & process barcode
     Quagga.onDetected(function(result) {
       let code = result.codeResult.code;
       document.getElementById('scan-frame').style.borderColor = 'green';
@@ -84,5 +82,6 @@
   </script>
 </body>
 </html>
+
 
 
