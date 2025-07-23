@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
-import pandas as pd # <--- Add this
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -20,17 +20,32 @@ def home():
 
 @app.route('/search')
 def search():
-    query = request.args.get('q', '').lower()
+    query = request.args.get('q', '').lower().strip()
     matches = []
 
-# You can switch to sheet 2 or 3 as needed
-    data = load_putawaysheet3() # or load_putawaysheet2()
+    # Load both sheets
+    data3 = load_putawaysheet3() # Sheet 3: UPC + Item Number
+    data2 = load_putawaysheet2() # Sheet 2: SKU + Putaway Location
 
-    for row in data:
-        if query in str(row.get('barcode', '')).lower() or query in str(row.get('name', '')).lower():
+    # Search Sheet 3
+    for row in data3:
+        upc = str(row.get('UPC', '')).strip().lower()
+        item_number = str(row.get('Item Number', '')).strip().lower()
+        if query in upc or query in item_number:
             matches.append({
-                "name": row.get('name', ''),
-                "location": row.get('location', '')
+                "sheet": "Putaway Sheet 3",
+                "name": row.get('Item Number', ''),
+                "location": row.get('UPC', '')
+            })
+
+    # Search Sheet 2
+    for row in data2:
+        sku = str(row.get('SKU', '')).strip().lower()
+        if query in sku:
+            matches.append({
+            "sheet": "Putaway Sheet 2",
+            "name": row.get('SKU', ''),
+            "location": row.get('Putaway Location', '')
             })
 
     return jsonify(matches)
