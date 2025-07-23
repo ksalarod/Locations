@@ -24,8 +24,8 @@ except Exception as e:
 # Replace with your actual IDs and tab names!
 PUTAWAYSHEET3_ID = "1q158TnWdpjpY2fZ_e5TVPADNlLvn37pp5468kI_lbCI"
 PUTAWAYSHEET2_ID = "1Q9C-k6cbT7tNtgAd1Hs79tQ4BeE9g775Uxchnuu3t7g"
-RANGE3 = "Sheet1!A:B"
-RANGE2 = "Sheet1!A:B"
+RANGE3 = "Sheet3!A:B"
+RANGE2 = "Sheet2!A:B"
 
 def fetch_sheet(spreadsheet_id, range_name):
     try:
