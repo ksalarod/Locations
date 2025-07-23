@@ -1,23 +1,47 @@
 from flask import Flask, request, jsonify, send_from_directory
-import pandas as pd
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+import os, json
 
 app = Flask(__name__)
 
-# Google Sheets URLs
-PUTAWAYSHEET3_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS8slYmMBaxGfOhQvSIvLPobwcX6OGWTRP8xk0uulGkSD9A_b_8cy-xXV16zbiqZBGkhpycfGAOHYug/pub?output=csv"
-PUTAWAYSHEET2_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQKJoXBk7b3ULmRa7s_21tJRahYrSjCIdIIhVeQWy07KllIRPFm8pbd2B43pr9DKnRQBMyZUE_N7W85/pub?output=csv"
+# Load service account from Render environment
+creds_dict = json.loads(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+creds = service_account.Credentials.from_service_account_info(
+    creds_dict,
+    scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+)
+service = build('sheets', 'v4', credentials=creds)
 
-def load_putawaysheet3():
-    return pd.read_csv(PUTAWAYSHEET3_URL).to_dict(orient="records")
+# Google Sheets IDs & Ranges
+PUTAWAYSHEET3_ID = "YOUR_SHEET3_ID"
+PUTAWAYSHEET2_ID = "YOUR_SHEET2_ID"
+RANGE3 = "Sheet1!A:B"  # UPC + Item Number
+RANGE2 = "Sheet1!A:B"  # SKU + Putaway Location
 
-def load_putawaysheet2():
-    return pd.read_csv(PUTAWAYSHEET2_URL).to_dict(orient="records")
+def fetch_sheet(spreadsheet_id, range_name):
+    result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
+    values = result.get('values', [])
+    if not values:
+        return []
+    headers = values[0]
+    data = [dict(zip(headers, row)) for row in values[1:]]
+    return data
 
-def find_putaway_location(upc, sheet2_data):
-    for row in sheet2_data:
-        if upc in str(row.get('SKU', '')).lower():
-            return row.get('Putaway Location', 'Not Found')
-    return "Not Found"
+def load_and_merge():
+    sheet3 = fetch_sheet(PUTAWAYSHEET3_ID, RANGE3)
+    sheet2 = fetch_sheet(PUTAWAYSHEET2_ID, RANGE2)
+    # Build lookup for putaway location by SKU
+    location_lookup = {str(row.get('SKU', '')).strip().lower(): row.get('Putaway Location', '') for row in sheet2}
+    merged = []
+    for row in sheet3:
+        sku = str(row.get('Item Number', '')).strip().lower()
+        merged.append({
+            "UPC": row.get('UPC', ''),
+            "Item Number": row.get('Item Number', ''),
+            "Putaway Location": location_lookup.get(sku, 'Not Found')
+        })
+    return merged
 
 @app.route('/')
 def home():
@@ -26,40 +50,18 @@ def home():
 @app.route('/search')
 def search():
     query = request.args.get('q', '').lower().strip()
+    data = load_and_merge()
     matches = []
-
-    print(f"Search Query: {query}")  # Logging for debugging
-
-    data3 = load_putawaysheet3()
-    data2 = load_putawaysheet2()
-
-    # Search Sheet 3 (UPC + Item Number)
-    for row in data3:
-        upc = str(row.get('UPC', '')).lower().strip()
-        item_number = str(row.get('Item Number', '')).lower().strip()
-        if query in upc or query in item_number:
-            matches.append({
-                "sheet": "Putaway Sheet 3",
-                "name": row.get('Item Number', ''),
-                "upc": row.get('UPC', ''),
-                "location": find_putaway_location(upc, data2)
-            })
-
-    # Search Sheet 2 (SKU + Putaway Location)
-    for row in data2:
-        sku = str(row.get('SKU', '')).lower().strip()
-        if query in sku:
-            matches.append({
-                "sheet": "Putaway Sheet 2",
-                "name": row.get('SKU', ''),
-                "upc": row.get('SKU', ''),
-                "location": row.get('Putaway Location', '')
-            })
-
-    print(f"Matches found: {len(matches)}")  # Logging for debugging
+    for row in data:
+        upc = str(row.get('UPC', '')).lower()
+        sku = str(row.get('Item Number', '')).lower()
+        location = str(row.get('Putaway Location', '')).lower()
+        if query in upc or query in sku or query in location:
+            matches.append(row)
     return jsonify(matches)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=81)
+
 
 
