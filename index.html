@@ -1,25 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Warehouse Item Lookup</title>
+  <title>Warehouse Scanner</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; text-align: center; }
-    h1 { margin: 20px 0; }
-    #scanner-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
-    #video { width: 100%; border-radius: 8px; background: black; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; text-align: center; }
+    #video { width: 100%; max-width: 500px; height: auto; border-radius: 8px; background: black; }
     #scan-frame { position: absolute; border: 3px solid red; top: 20%; left: 10%; width: 80%; height: 40%; border-radius: 8px; pointer-events: none; }
     #manual-input { margin: 20px auto; display: flex; justify-content: center; gap: 10px; }
-    input[type="text"] { padding: 10px; font-size: 1.1em; border-radius: 5px; border: 1px solid #ccc; width: 60%; }
-    button { padding: 10px 15px; font-size: 1.1em; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
-    button:hover { background: #0056b3; }
-    #result-card { display: none; background: #fff; border-radius: 8px; padding: 15px; margin: 20px auto; max-width: 500px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-    #result-card h2 { margin: 0; font-size: 1.4em; }
-    #result-card p { margin: 5px 0; font-size: 1.1em; }
+    input { padding: 10px; font-size: 1.1em; width: 60%; }
+    button { padding: 10px; background: #007bff; color: #fff; border: none; border-radius: 5px; font-size: 1.1em; }
+    #result-card { display: none; background: #fff; padding: 15px; border-radius: 8px; margin: 20px auto; max-width: 500px; }
   </style>
 </head>
 <body>
   <h1>Warehouse Item Lookup</h1>
-  <div id="scanner-container">
+  <div id="scanner-container" style="position:relative; max-width:500px; margin:auto;">
     <video id="video" playsinline autoplay muted></video>
     <div id="scan-frame"></div>
   </div>
@@ -31,61 +26,61 @@
     <h2 id="item-name"></h2>
     <p><strong>UPC/SKU:</strong> <span id="item-upc"></span></p>
     <p><strong>Location:</strong> <span id="item-location"></span></p>
-    <p><small>Source: <span id="sheet-name"></span></small></p>
   </div>
 
-  <script type="module">
-    import { BrowserMultiFormatReader } from 'https://cdn.jsdelivr.net/npm/@zxing/library@latest/esm/index.js';
-    const codeReader = new BrowserMultiFormatReader();
+  <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+  <script>
+    const codeReader = new ZXing.BrowserMultiFormatReader();
     const video = document.getElementById('video');
+    let lastScanned = "";
 
-    // Camera init for iOS
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => { video.srcObject = stream; video.play(); })
-      .catch(err => console.error("Camera error:", err));
-
-    codeReader.listVideoInputDevices().then(videoInputDevices => {
-      const firstDeviceId = videoInputDevices[0].deviceId;
-      codeReader.decodeFromVideoDevice(firstDeviceId, 'video', (result, err) => {
-        if (result) {
-          processResult(result.text);
-        }
-      });
-    }).catch(err => console.error(err));
+    // Start camera + continuous scan
+    window.addEventListener('load', () => {
+      codeReader.listVideoInputDevices().then(devices => {
+        const deviceId = devices[0]?.deviceId;
+        if (!deviceId) { alert("No camera found"); return; }
+        codeReader.decodeFromVideoDevice(deviceId, 'video', (result, err) => {
+          if (result && result.text !== lastScanned) {
+            lastScanned = result.text;
+            processResult(result.text);
+            setTimeout(() => { lastScanned = ""; }, 2000); // cooldown
+          }
+        });
+      }).catch(err => alert("Camera error: " + err));
+    });
 
     function processResult(code) {
-      fetch('/search?q=' + code)
+      fetch('/search?q=' + encodeURIComponent(code))
         .then(res => res.json())
-        .then(data => displayResult(data, code));
+        .then(data => displayResult(data, code))
+        .catch(err => alert("Search error: " + err));
     }
 
     function manualSearch() {
       const code = document.getElementById('manual-search').value;
       if (!code) return;
-      fetch('/search?q=' + code)
+      fetch('/search?q=' + encodeURIComponent(code))
         .then(res => res.json())
-        .then(data => displayResult(data, code));
+        .then(data => displayResult(data, code))
+        .catch(err => alert("Search error: " + err));
     }
 
     function displayResult(data, code) {
       if (data.length > 0) {
         let item = data[0];
-        document.getElementById('item-name').textContent = item.name || "Unknown Item";
-        document.getElementById('item-upc').textContent = item.upc || "-";
-        document.getElementById('item-location').textContent = item.location || "Not Found";
-        document.getElementById('sheet-name').textContent = item.sheet || "-";
+        document.getElementById('item-name').textContent = item['Item Number'] || "Unknown Item";
+        document.getElementById('item-upc').textContent = item['UPC'] || "-";
+        document.getElementById('item-location').textContent = item['Putaway Location'] || "Not Found";
       } else {
         document.getElementById('item-name').textContent = "Item Not Found";
         document.getElementById('item-upc').textContent = code;
         document.getElementById('item-location').textContent = "-";
-        document.getElementById('sheet-name').textContent = "-";
       }
       document.getElementById('result-card').style.display = 'block';
     }
   </script>
 </body>
 </html>
-
 
 
 
