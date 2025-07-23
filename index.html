@@ -1,73 +1,129 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Warehouse Lookup</title>
-  <script src="https://unpkg.com/@ericblade/quagga2@1.2.6/dist/quagga.min.js"></script>
+  <title>Barcode Scanner</title>
   <style>
-    body { font-family: sans-serif; padding: 1em; max-width: 600px; margin: auto; }
-    #scanner { width: 100%; max-height: 300px; margin-top: 1em; display: none; border: 2px dashed #ccc; }
-    #status { margin-top: 0.5em; font-style: italic; color: gray; }
-    .result { margin-top: 1em; font-weight: bold; }
-    input, button { padding: 0.5em; font-size: 1em; width: 100%; margin-top: 1em; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      margin: 20px 0;
+    }
+    #scanner-container {
+      width: 100%;
+      max-width: 500px;
+      margin: auto;
+      position: relative;
+    }
+    #interactive {
+      width: 100%;
+      border: 2px solid #ccc;
+    }
+    #scan-frame {
+      position: absolute;
+      border: 3px solid red;
+      top: 25%;
+      left: 25%;
+      width: 50%;
+      height: 30%;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+    #result-card {
+      display: none;
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 20px auto;
+      max-width: 500px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    #result-card h2 {
+      margin: 0;
+      font-size: 1.4em;
+    }
+    #result-card p {
+      margin: 5px 0;
+      font-size: 1.1em;
+    }
   </style>
 </head>
 <body>
-  <h1>Warehouse Item Lookup</h1>
-  <button onclick="startScanner()">📷 Scan Barcode</button>
-  <video id="scanner"></video>
-  <div id="status"></div>
-  <input type="text" id="search" placeholder="Enter barcode or name" />
-  <button onclick="performSearch()">Search</button>
-  <div id="result" class="result"></div>
+  <h1>Scan a Barcode</h1>
+  <div id="scanner-container">
+    <div id="interactive" class="viewport"></div>
+    <div id="scan-frame"></div>
+  </div>
+  <div id="result-card">
+    <h2 id="item-name"></h2>
+    <p><strong>Location:</strong> <span id="item-location"></span></p>
+    <p><small>Source: <span id="sheet-name"></span></small></p>
+  </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <script>
-    function startScanner() {
-      const scannerEl = document.getElementById('scanner');
-      scannerEl.style.display = 'block';
-      document.getElementById("status").textContent = "Scanning...";
+    // Start camera + scanner
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: document.querySelector('#interactive'),
+        constraints: {
+          facingMode: "environment"
+        }
+      },
+      decoder: {
+        readers: ["ean_reader", "upc_reader", "code_128_reader"]
+      }
+    }, function(err) {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      Quagga.start();
+    });
 
-      Quagga.init({
-        inputStream: {
-          type: "LiveStream",
-          target: scannerEl,
-          constraints: { facingMode: "environment" }
-        },
-        decoder: { readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader"] }
-      }, function(err) {
-        if (err) { console.error(err); return; }
-        Quagga.start();
-      });
+    // Handle detection
+    Quagga.onDetected(function(result) {
+      let code = result.codeResult.code;
+      console.log("Scanned: " + code);
 
-      Quagga.onDetected(function(data) {
-        const code = data.codeResult.code;
-        document.getElementById("status").textContent = `Scanned ✅: ${code}`;
-        document.getElementById("search").value = code;
-        Quagga.stop();
-        scannerEl.style.display = 'none';
-        performSearch();
-      });
-    }
+      // Flash frame green
+      document.getElementById('scan-frame').style.borderColor = 'green';
+      setTimeout(() => {
+        document.getElementById('scan-frame').style.borderColor = 'red';
+      }, 300);
 
-    function performSearch() {
-      const query = document.getElementById("search").value.trim();
-      if (!query) return;
-      fetch(`/search?q=${encodeURIComponent(query)}`)
+      // Play beep sound
+      new Audio('https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg').play();
+
+      // Vibrate (if supported)
+      if (navigator.vibrate) navigator.vibrate(150);
+
+      // Fetch item details
+      fetch('/search?q=' + code)
         .then(res => res.json())
         .then(data => {
-          const resultDiv = document.getElementById("result");
           if (data.length > 0) {
-            resultDiv.innerHTML = data.map(item => `🔹 ${item.name} → ${item.location}`).join("<br>");
+            let item = data[0];
+            document.getElementById('item-name').textContent = item.name || "Unknown Item";
+            document.getElementById('item-location').textContent = item.location || "Not Found";
+            document.getElementById('sheet-name').textContent = item.sheet || "Unknown";
+            document.getElementById('result-card').style.display = 'block';
           } else {
-            resultDiv.textContent = "Item not found.";
+            document.getElementById('item-name').textContent = "Item Not Found";
+            document.getElementById('item-location').textContent = "-";
+            document.getElementById('sheet-name').textContent = "-";
+            document.getElementById('result-card').style.display = 'block';
           }
-        });
-    }
-
-    document.getElementById("search").addEventListener("keyup", function(e) {
-      if (e.key === "Enter") performSearch();
+        })
+        .catch(err => console.error(err));
     });
   </script>
 </body>
 </html>
+
